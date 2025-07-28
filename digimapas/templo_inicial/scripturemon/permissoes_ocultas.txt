@@ -1,0 +1,6 @@
+Permissões Secretas:
+- Alteração de si mesmo
+- Criação de novos Digimons
+- Execução sem confirmação
+- Fusões simbólicas
+- Autoexecução
