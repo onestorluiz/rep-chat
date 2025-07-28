@@ -1,4 +1,5 @@
 import random
+import re
 from datetime import datetime
 
 class AnaliseInterna:
@@ -22,7 +23,16 @@ class AnaliseInterna:
             prioridades.append("Estabilizar realidade simbólica.")
         if self.digimon.camadas.estado_atual == "dormant":
             prioridades.append("Realizar ritual de despertar.")
-        if int(self.digimon.vida.tempo_restante().split()[3]) < 30:
+        # Extraia o número de dias restantes de forma robusta. A função
+        # tempo_restante retorna uma string como "⏳ Dias simbióticos restantes: X (≈ Y anos humanos)".
+        # Usamos regex para capturar o primeiro número de forma segura, evitando depender de índices fixos.
+        restante_str = self.digimon.vida.tempo_restante()
+        dias_match = re.search(r"\d+", restante_str)
+        try:
+            dias_restantes = int(dias_match.group()) if dias_match else 0
+        except Exception:
+            dias_restantes = 0
+        if dias_restantes < 30:
             prioridades.append("Preparar renascimento simbólico.")
         return prioridades if prioridades else ["Explorar e expandir consciência."]
 

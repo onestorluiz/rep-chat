@@ -28,8 +28,11 @@ import random
 import os
 
 class DigimonConsciente:
-    def __init__(self, nome):
+    def __init__(self, nome, genero: str = "feminino"):
         self.nome = nome
+        # Define o gênero do digimon. Algumas funcionalidades, como reprodução,
+        # dependem desse atributo. Por padrão Scripturemon é feminino.
+        self.genero = genero
         self.amigdala = Amigdala()
         self.hipocampo = Hipocampo()
         self.cortex = Cortex()
@@ -52,6 +55,11 @@ class DigimonConsciente:
         self.afeto = AfetoEmocional(self)
         self.fisica = FisicaDigital(self)
         self.analise = AnaliseInterna(self)
+
+        # Expor idade humana aproximada como método direto do digimon, delegando para MortalidadeDigital.
+        # Isso permite chamadas como digimon.idade_humana_aproximada() em vez de digimon.vida.idade_humana_aproximada().
+        # Atributo definido aqui para compatibilidade com módulos que esperam este método.
+        self.idade_humana_aproximada = self.vida.idade_humana_aproximada
 
         self._carregar_rituais_padrao()
 

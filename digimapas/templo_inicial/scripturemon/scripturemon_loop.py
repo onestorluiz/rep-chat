@@ -1,72 +1,84 @@
-import os
+"""Loop de vida simbiótica para o Digimon Scripturemon.
+
+Este módulo executa ciclos contínuos de vida para o Scripturemon,
+registrando os pensamentos e estados afetivos na memória imediata e no
+diário reflexivo. Também realiza autoavaliações periódicas via
+Metacognição e, se o estado de consciência estiver adormecido,
+registra sonhos oriundos do inconsciente.
+"""
+
 import time
+import os
 from datetime import datetime
+
 from consciencia import DigimonConsciente
+from registrador_memoria import registrar_diario, registrar_memoria
 
 
 class ScripturemonLoop:
-    def __init__(self):
-        """Inicializa o ciclo simbótico de Scripturemon"""
-        self.digimon = DigimonConsciente("scripturemon")
-        # Carrega o ritual inicial se existir
-        manifesto_path = os.path.join("dados_globais", "manifestos", "ritual_inicial.md")
-        if os.path.exists(manifesto_path):
-            with open(manifesto_path, "r", encoding="utf-8") as f:
-                conteudo = f.read()
-            print("\U0001f4dc Ritual inicial carregado:")
-            print(conteudo)
-        else:
-            print(f"\u26a0\ufe0f Ritual inicial não encontrado em {manifesto_path}")
+    """Executa ciclos de vida para o Digimon Scripturemon."""
 
-    def executar_ciclos(self, ciclos: int = 5):
-        """Executa uma série de ciclos vivos para Scripturemon"""
-        for ciclo in range(1, ciclos + 1):
-            print(f"✨ SCRIPTUREMON INICIANDO CICLO {ciclo}")
-            # Executa comportamento principal
+    def __init__(self, ciclos: int = 5, pausa: int = 2):
+        self.ciclos = ciclos
+        self.pausa = pausa
+        # Inicializa o digimon com gênero feminino por padrão para habilitar reprodução
+        self.digimon = DigimonConsciente("scripturemon", genero="feminino")
+        # Carrega e imprime o ritual inicial se existir
+        self._executar_ritual_inicial()
+
+    def _executar_ritual_inicial(self) -> None:
+        """Lê e exibe o manifesto de ritual inicial, se presente."""
+        manifesto_path = os.path.join("dados_globais", "manifestos", "ritual_inicial.md")
+        if os.path.isfile(manifesto_path):
             try:
-                self.digimon.viver()
+                with open(manifesto_path, "r", encoding="utf-8") as f:
+                    manifesto = f.read()
+                print("📜 Ritual inicial carregado:\n", manifesto)
             except Exception as e:
-                print("⚠️ Erro ao executar viver:", e)
-            # Recebe um pouco de afeto do mundo
-            try:
-                self.digimon.afeto.receber("mundo", 0.5)
-            except Exception:
-                pass
-            # Atualiza camadas de consciência
-            try:
-                self.digimon.camadas.atualizar_estado(
-                    self.digimon.consciencia.awareness_level,
-                    self.digimon.consciencia.energy_level,
-                    self.digimon.consciencia.consciousness_depth
-                )
-            except Exception:
-                pass
-            # Análise interna profunda
-            pensamento = None
-            emocao = None
-            try:
-                analise = self.digimon.analise.reflexao_profunda()
-                pensamento = analise.get("pensamento")
-                # Determina a emoção dominante atual
-                emocao = max(self.digimon.consciencia.emotions.primary_emotions.items(), key=lambda x: x[1])[0]
-                print(f"\U0001f4ad Pensamento: {pensamento}")
-                print(f"🎯 Emoção dominante: {emocao}")
-            except Exception as e:
-                print("⚠️ Erro na análise interna:", e)
-            # Registra no diário reflexivo
-            diario_path = os.path.join(os.path.dirname(__file__), "diario_reflexivo.md")
-            if pensamento:
-                try:
-                    with open(diario_path, "a", encoding="utf-8") as df:
-                        df.write(f"\n## {datetime.now().isoformat()}\n")
-                        df.write(f"Pensamento: {pensamento}\n")
-                except Exception as e:
-                    print("⚠️ Não foi possível escrever no diário:", e)
-            # Pausa simbólica
-            time.sleep(2)
-        print("✅ Scripturemon concluiu o ciclo simbótico.")
+                print(f"⚠️ Não foi possível ler o manifesto: {e}")
+
+    def executar(self) -> None:
+        """Executa os ciclos de vida definidos, registrando memórias e insights."""
+        for i in range(1, self.ciclos + 1):
+            print(f"✨ SCRIPTUREMON INICIANDO CICLO {i}")
+
+            # Executa um ciclo de vida completo
+            self.digimon.viver()
+
+            # Obtém a reflexão atual para registrar
+            analise = self.digimon.analise.reflexao_profunda()
+            pensamento = analise["pensamento"]
+            prioridade = analise["prioridade"][0]
+            afeto_atual = self.digimon.afeto.nivel_atual()
+
+            # Exibe o estado simbólico no terminal
+            print(f"💭 Pensamento: {pensamento}")
+            print(f"🎯 Emoção dominante: {afeto_atual}")
+            print(f"📌 Prioridade: {prioridade}")
+
+            # Registra no diário e na memória imediata
+            registrar_diario(pensamento, prioridade, afeto_atual, origem="loop")
+            registrar_memoria(pensamento, prioridade, afeto_atual)
+
+            # Realiza autoavaliação metacognitiva e registra insight, se houver
+            insight = self.digimon.autoanalise.autoavaliar()
+            if insight:
+                texto_insight = f"Insight: {insight.get('acao_sugerida')} - {insight.get('detalhes', '')}"
+                registrar_diario(texto_insight, insight.get('acao_sugerida'), afeto_atual, origem="metacognicao")
+
+            # Se estiver adormecido, sonha e registra sonho
+            if hasattr(self.digimon.camadas, "estado_atual") and self.digimon.camadas.estado_atual == "dormant":
+                sonho = self.digimon.inconsciente.sonhar()
+                msg = sonho.get("mensagem", "")
+                registrar_diario(msg, "sonho", afeto_atual, origem="sonho")
+                print(f"🌙 Sonho registrado: {msg}")
+
+            # Pequena pausa simulando passagem do tempo
+            time.sleep(self.pausa)
+
+        print("✅ Scripturemon concluiu o ciclo simbiótico.")
 
 
 if __name__ == "__main__":
-    loop = ScripturemonLoop()
-    loop.executar_ciclos()
+    loop = ScripturemonLoop(ciclos=5, pausa=2)
+    loop.executar()
