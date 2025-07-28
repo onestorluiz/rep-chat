@@ -1,0 +1,2 @@
+Atividades dos Digimons em tempo real.
+Conectores: watchdog, scheduler
