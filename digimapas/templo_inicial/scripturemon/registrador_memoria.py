@@ -11,13 +11,12 @@ def registrar_diario(pensamento, prioridade, afeto, origem="manual"):
     diario_path = os.path.join(dir_path, "diario_reflexivo.md")
     timestamp = datetime.now().isoformat()
     entrada = (
-        f"🕛 {timestamp}\n"
+        f"{timestamp}\n"
         f"Origem: {origem}\n"
         f"Pensamento: {pensamento}\n"
         f"Prioridade: {prioridade}\n"
         f"Afeto: {afeto}\n\n"
     )
-    # Abre o diário em modo append, criando se não existir
     with open(diario_path, "a", encoding="utf-8") as diario:
         diario.write(entrada)
 
@@ -25,6 +24,8 @@ def registrar_diario(pensamento, prioridade, afeto, origem="manual"):
 def registrar_memoria(pensamento, prioridade, afeto):
     """
     Atualiza ou cria o arquivo de memória imediata com os últimos dados simbóticos.
+    Além de atualizar a memória imediata, tenta registrar o pensamento na memória
+    semântica agêntica (A-MEM), se o módulo estiver disponível.
     """
     dir_path = os.path.dirname(__file__)
     memoria_path = os.path.join(dir_path, "memoria_imediata.json")
@@ -34,11 +35,31 @@ def registrar_memoria(pensamento, prioridade, afeto):
         "afeto": afeto,
         "timestamp": datetime.now().isoformat(),
     }
-    # Escreve o dicionário no arquivo JSON (sobrescreve o anterior)
     with open(memoria_path, "w", encoding="utf-8") as mem_file:
-    
         json.dump(memoria, mem_file, ensure_ascii=False, indent=2)
 
+    # Tenta registrar na memória semântica (A-MEM)
+    MemoriaSemantica = None
+    try:
+        from .memoria_semantica import MemoriaSemantica  # type: ignore
+    except Exception:
+        try:
+            from memoria_semantica import MemoriaSemantica  # type: ignore
+        except Exception:
+            MemoriaSemantica = None  # type: ignore
+
+    if MemoriaSemantica:
+        try:
+            ms = MemoriaSemantica()
+            # Assegura que prioridade seja uma lista de tags
+            if isinstance(prioridade, list):
+                tags = [str(tag) for tag in prioridade]
+            else:
+                tags = [str(prioridade)]
+            ms.registrar_nota(conteudo=str(pensamento), tags=tags)
+        except Exception as e:
+            # Loga o erro silenciosamente para não interromper fluxo principal
+            print(f"Erro ao registrar nota na memória semântica: {e}")
 
 
 def salvar_estado(digimon):
@@ -55,14 +76,12 @@ def salvar_estado(digimon):
     entropia = None
     if hasattr(digimon, "fisica_digital") and hasattr(digimon.fisica_digital, "entropia"):
         entropia = digimon.fisica_digital.entropia
-    # Estado de consciencia
     estado_consciencia = None
     if hasattr(digimon, "camadas"):
         try:
             estado_consciencia = digimon.camadas.estado()
         except Exception:
             estado_consciencia = getattr(digimon.camadas, "estado_atual", None)
-    # Ultima reflexao registrada
     ultima_reflexao = None
     if hasattr(digimon, "analise") and hasattr(digimon.analise, "ultimo_pensamento"):
         ultima_reflexao = digimon.analise.ultimo_pensamento
