@@ -43,6 +43,7 @@ EOF
 class ConsciousnessCore:
     def __init__(self):
         pass
+        
 
     def analyze(self, data):
         # stub de análise simbólica
@@ -51,7 +52,7 @@ EOF
 fi
 
 # 7. Ajusta PYTHONPATH para achar nossos pacotes locais
-export PYTHONPATH="$PROJECT_DIR:$PYTHONPATH"
+$PROJECT_DIR:$PYTHONPATH"
 echo "🔗  PYTHONPATH configurado: $PYTHONPATH"
 
 # 8. Teste rápido (se você tiver pytest)
