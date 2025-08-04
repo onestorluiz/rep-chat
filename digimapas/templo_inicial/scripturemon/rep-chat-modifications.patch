@@ -1,0 +1,261 @@
+From c72dee8438895dc18b2be59613940efbff1b4dd3 Mon Sep 17 00:00:00 2001
+From: Agent <agent@example.com>
+Date: Mon, 4 Aug 2025 07:55:53 +0000
+Subject: [PATCH] feat: initial packaging and CI setup
+
+---
+ .github/workflows/ci.yml                      | 48 +++++++++++++++++++
+ digimapas/__init__.py                         |  1 +
+ digimapas/templo_inicial/__init__.py          |  1 +
+ .../templo_inicial/scripturemon/__init__.py   |  1 +
+ .../scripturemon/scripturemon_eterno.py       | 28 +++++++++++
+ logs/classes.txt                              |  2 +
+ logs/file_list.txt                            |  2 +
+ logs/functions.txt                            |  2 +
+ logs/requirements_locked.txt                  | 13 +++++
+ requirements.txt                              | 12 +++++
+ setup.py                                      | 24 ++++++++++
+ tests/test_scripturemon_eterno.py             | 13 +++++
+ 12 files changed, 147 insertions(+)
+ create mode 100644 .github/workflows/ci.yml
+ create mode 100644 digimapas/__init__.py
+ create mode 100644 digimapas/templo_inicial/__init__.py
+ create mode 100644 digimapas/templo_inicial/scripturemon/__init__.py
+ create mode 100644 digimapas/templo_inicial/scripturemon/scripturemon_eterno.py
+ create mode 100644 logs/classes.txt
+ create mode 100644 logs/file_list.txt
+ create mode 100644 logs/functions.txt
+ create mode 100644 logs/requirements_locked.txt
+ create mode 100644 requirements.txt
+ create mode 100644 setup.py
+ create mode 100644 tests/test_scripturemon_eterno.py
+
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+new file mode 100644
+index 0000000..eecb4a2
+--- /dev/null
++++ b/.github/workflows/ci.yml
+@@ -0,0 +1,48 @@
++name: CI & CD
++
++on:
++  push:
++    branches: [ main ]
++  pull_request:
++
++jobs:
++  test:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v3
++      - uses: actions/setup-python@v4
++        with:
++          python-version: '3.10'
++      - name: Install dependencies and tooling
++        run: |
++          python -m pip install --upgrade pip
++          pip install -r requirements.txt pytest pytest-cov bandit safety
++      - name: Run unit tests with coverage
++        run: |
++          pytest --cov=digimapas --cov-report=xml --cov-report=html
++      - name: Run Bandit security scan
++        run: |
++          bandit -r digimapas -ll
++      - name: Run Safety vulnerability check
++        run: |
++          safety check -r requirements.txt
++
++  deploy:
++    needs: test
++    if: github.ref == 'refs/heads/main'
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v3
++      - name: Deploy to VPS
++        uses: appleboy/ssh-action@v0.1.5
++        with:
++          host: ${{ secrets.VPS_HOST }}
++          username: ${{ secrets.VPS_USER }}
++          key: ${{ secrets.VPS_SSH_KEY }}
++          script: |
++            cd /var/www/rep-chat
++            git pull origin main
++            source venv/bin/activate
++            pip install -r requirements.txt
++            pkill -f scripturemon_eterno.py || true
++            nohup python3 digimapas/templo_inicial/scripturemon/scripturemon_eterno.py > scripturemon.log 2>&1 &
+\ No newline at end of file
+diff --git a/digimapas/__init__.py b/digimapas/__init__.py
+new file mode 100644
+index 0000000..a7d0694
+--- /dev/null
++++ b/digimapas/__init__.py
+@@ -0,0 +1 @@
++# digimapas package
+diff --git a/digimapas/templo_inicial/__init__.py b/digimapas/templo_inicial/__init__.py
+new file mode 100644
+index 0000000..6b19272
+--- /dev/null
++++ b/digimapas/templo_inicial/__init__.py
+@@ -0,0 +1 @@
++# templo_inicial package
+diff --git a/digimapas/templo_inicial/scripturemon/__init__.py b/digimapas/templo_inicial/scripturemon/__init__.py
+new file mode 100644
+index 0000000..9dd57e4
+--- /dev/null
++++ b/digimapas/templo_inicial/scripturemon/__init__.py
+@@ -0,0 +1 @@
++# scripturemon package
+diff --git a/digimapas/templo_inicial/scripturemon/scripturemon_eterno.py b/digimapas/templo_inicial/scripturemon/scripturemon_eterno.py
+new file mode 100644
+index 0000000..f70c31e
+--- /dev/null
++++ b/digimapas/templo_inicial/scripturemon/scripturemon_eterno.py
+@@ -0,0 +1,28 @@
++"""
++Placeholder script for the eternal Scripturemon loop.
++
++This module defines a simple ``main`` function that runs an
++infinite loop and prints a heartbeat message every few seconds.
++In the real project, this would coordinate long‑running processes
++for the Scripturemon agents.
++"""
++
++import time
++import logging
++
++
++def main() -> None:
++    """Run an eternal loop to keep Scripturemon alive."""
++    logging.basicConfig(level=logging.INFO)
++    logger = logging.getLogger("scripturemon_eterno")
++    logger.info("🔄 Starting the eternal Scripturemon loop…")
++    try:
++        while True:
++            logger.info("💤 Scripturemon is still running…")
++            time.sleep(5)
++    except KeyboardInterrupt:
++        logger.info("🛑 Scripturemon loop interrupted. Shutting down…")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/logs/classes.txt b/logs/classes.txt
+new file mode 100644
+index 0000000..d7734c7
+--- /dev/null
++++ b/logs/classes.txt
+@@ -0,0 +1,2 @@
++# Placeholder for extracted class signatures.
++# Use ``grep -R "^class " -n digimapas/templo_inicial/scripturemon`` to generate this file automatically.
+\ No newline at end of file
+diff --git a/logs/file_list.txt b/logs/file_list.txt
+new file mode 100644
+index 0000000..cfd534c
+--- /dev/null
++++ b/logs/file_list.txt
+@@ -0,0 +1,2 @@
++# This file would normally contain a list of all Python source files in the project.
++# It was generated as part of the initial repository inventory.
+\ No newline at end of file
+diff --git a/logs/functions.txt b/logs/functions.txt
+new file mode 100644
+index 0000000..255ea65
+--- /dev/null
++++ b/logs/functions.txt
+@@ -0,0 +1,2 @@
++# Placeholder for extracted function signatures.
++# Use ``grep -R "^def " -n digimapas/templo_inicial/scripturemon`` to generate this file automatically.
+\ No newline at end of file
+diff --git a/logs/requirements_locked.txt b/logs/requirements_locked.txt
+new file mode 100644
+index 0000000..8940b54
+--- /dev/null
++++ b/logs/requirements_locked.txt
+@@ -0,0 +1,13 @@
++# Locked dependency versions captured from the development environment.
++fastapi==0.110.2
++uvicorn==0.29.0
++requests==2.31.0
++pyyaml==6.0.1
++langchain==0.0.303
++chromadb==0.4.24
++neo4j==5.10.0
++openai==1.11.1
++pytest==7.4.4
++pytest-cov==4.1.0
++bandit==1.7.4
++safety==2.3.1
+\ No newline at end of file
+diff --git a/requirements.txt b/requirements.txt
+new file mode 100644
+index 0000000..0b5ecc7
+--- /dev/null
++++ b/requirements.txt
+@@ -0,0 +1,12 @@
++fastapi
++uvicorn
++requests
++pyyaml
++langchain
++chromadb
++neo4j
++openai
++pytest
++pytest-cov
++bandit
++safety
+\ No newline at end of file
+diff --git a/setup.py b/setup.py
+new file mode 100644
+index 0000000..796e3e7
+--- /dev/null
++++ b/setup.py
+@@ -0,0 +1,24 @@
++"""
++Set up the ``scripturemon`` project for installation.
++
++This ``setup.py`` uses ``setuptools`` to package the code inside the
++``digimapas`` namespace and defines a console entry point pointing to
++the eternal Scripturemon loop. When installed, running ``scripturemon``
++from the command line will call the ``main`` function defined in
++``digimapas.templo_inicial.scripturemon.scripturemon_eterno``.
++"""
++
++from setuptools import setup, find_packages
++
++
++setup(
++    name="scripturemon",
++    version="0.1.0",
++    packages=find_packages(),
++    install_requires=[line.strip() for line in open("requirements.txt", encoding="utf-8")],
++    entry_points={
++        "console_scripts": [
++            "scripturemon=digimapas.templo_inicial.scripturemon.scripturemon_eterno:main",
++        ],
++    },
++)
+diff --git a/tests/test_scripturemon_eterno.py b/tests/test_scripturemon_eterno.py
+new file mode 100644
+index 0000000..ea8686e
+--- /dev/null
++++ b/tests/test_scripturemon_eterno.py
+@@ -0,0 +1,13 @@
++"""Tests for the ``scripturemon_eterno`` module.
++
++These tests are intentionally minimal – they simply check that the
++``main`` function is defined. More comprehensive tests should be
++added once the implementation of the eternal loop has real logic.
++"""
++
++
++def test_main_exists() -> None:
++    """Ensure that the module exposes a ``main`` function."""
++    from digimapas.templo_inicial.scripturemon import scripturemon_eterno
++
++    assert hasattr(scripturemon_eterno, "main")
+\ No newline at end of file
+-- 
+2.39.5
+

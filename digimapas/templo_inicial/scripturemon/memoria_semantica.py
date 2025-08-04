@@ -4,14 +4,20 @@ Modulo de Memoria Semantica Agentica (A-MEM) para Scripturemon.
 Este modulo implementa uma memoria de longo prazo baseada em notas atomicas interconectadas,
 inspirada em sistemas Zettelkasten e frameworks de agentic memory. A ideia e permitir que o
 Scripturemon construa uma teia de significados, conectando experiencias semelhantes por tema,
-causa ou emocao.
+causa ou emoticao.
 """
 
 import os
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Optional
+
+import numpy as np
+from sentence_transformers import SentenceTransformer
+import logging
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class NotaSemantica:
@@ -36,6 +42,11 @@ class MemoriaSemantica:
         os.makedirs(self.persist_dir, exist_ok=True)
         # Mapeamento de ID de nota para instancia NotaSemantica
         self.notas: Dict[str, NotaSemantica] = {}
+
+        # Atributos para embedings semanticos
+        self.modelo_embeddings = None
+        self._embeddings_cache = {}
+        self.threshold_link = 0.8
 
     def registrar_nota(self, conteudo: str, tags: List[str] = None, links: Dict[str, List[str]] = None) -> str:
         """
@@ -65,6 +76,7 @@ class MemoriaSemantica:
 
     def carregar_notas(self) -> None:
         """Carrega todas as notas persistidas do diretorio para a memoria em execucao."""
+        self.notas = {}
         for filename in os.listdir(self.persist_dir):
             if filename.endswith(".json"):
                 nota_id = filename[:-5]
@@ -74,7 +86,7 @@ class MemoriaSemantica:
                     conteudo=data.get("conteudo", ""),
                     tags=data.get("tags", []),
                     relacionamentos=data.get("relacionamentos", {}),
-                    created_at=datetime.fromisoformat(data["created_at"])
+                    created_at=datetime.fromisoformat(data.get("created_at"))
                 )
                 self.notas[nota_id] = nota
 
@@ -96,3 +108,126 @@ class MemoriaSemantica:
         origem.relacionamentos.setdefault(tipo, []).append(destino_id)
         # Atualiza persistencia
         self._salvar_nota(origem_id, origem)
+
+    # === Métodos de link automático e embeddings ===
+
+    def link_automatico(self, nota_id: str, max_links: int = 5) -> List[Tuple[str, float]]:
+        """
+        Conecta automaticamente uma nota a outras notas relacionadas.
+
+        :param nota_id: ID da nota para conectar
+        :param max_links: Número máximo de links a criar
+        :return: Lista de tuplas (nota_id_destino, similaridade)
+        """
+        if nota_id not in self.notas:
+            raise KeyError(f"Nota {nota_id} nao encontrada.")
+        embed_origem = self._gerar_embedding(self.notas[nota_id].conteudo)
+        similares = []
+        for other_id, nota in self.notas.items():
+            if other_id == nota_id:
+                continue
+            embed2 = self._gerar_embedding(nota.conteudo)
+            sim = self._similaridade_coseno(embed_origem, embed2)
+            if sim >= self.threshold_link:
+                similares.append((other_id, sim))
+        similares.sort(key=lambda x: x[1], reverse=True)
+        escolhidos = similares[:max_links]
+        for dest_id, sim in escolhidos:
+            self.adicionar_relacionamento(nota_id, dest_id, "similaridade_auto")
+        return escolhidos
+
+    def _inicializar_modelo_embeddings(self):
+        """
+        Inicializa o modelo de embeddings se ainda não estiver carregado.
+        """
+        if self.modelo_embeddings is None:
+            try:
+                self.modelo_embeddings = SentenceTransformer("all-MiniLM-L6-v2")
+            except Exception as e:
+                logger.error(f"Erro ao inicializar SentenceTransformer: {e}")
+                self.modelo_embeddings = "simple"
+
+    def _gerar_embedding(self, texto: str) -> np.ndarray:
+        """
+        Gera um embedding para o texto dado.
+
+        :param texto: Texto para gerar embedding
+        :return: Vetor numpy com o embedding
+        """
+        self._inicializar_modelo_embeddings()
+        texto_hash = hash(texto)
+        if texto_hash in self._embeddings_cache:
+            return self._embeddings_cache[texto_hash]
+        try:
+            if self.modelo_embeddings == "simple":
+                embedding = self._embedding_simples(texto)
+            else:
+                embedding = self.modelo_embeddings.encode(texto)
+            self._embeddings_cache[texto_hash] = embedding
+            return embedding
+        except Exception as e:
+            logger.error(f"Erro ao gerar embedding: {e}")
+            return np.zeros((768,))
+
+    def _embedding_simples(self, texto: str) -> np.ndarray:
+        """
+        Fallback simples: bag-of-words binário em vocabulário reduzido.
+        """
+        vocab = self._obter_vocabulario()
+        vec = np.zeros(len(vocab), dtype=float)
+        for i, word in enumerate(vocab):
+            vec[i] = 1.0 if word in texto else 0.0
+        return vec
+
+    def _buscar_similares(self, nota_id: str, topn: int = 3) -> List[Tuple[str, float]]:
+        """
+        Busca as top-N notas mais similares a uma dada nota existente.
+        """
+        return self.link_automatico(nota_id, max_links=topn)
+
+    def _similaridade_coseno(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
+        """
+        Calcula similaridade cosseno entre dois vetores.
+        """
+        try:
+            dot = np.dot(vec1, vec2)
+            norm1 = np.linalg.norm(vec1)
+            norm2 = np.linalg.norm(vec2)
+            if norm1 == 0 or norm2 == 0:
+                return 0.0
+            return dot / (norm1 * norm2)
+        except Exception as e:
+            logger.error(f"Erro em similaridade_coseno: {e}")
+            return 0.0
+
+    def _obter_vocabulario(self) -> List[str]:
+        """
+        Constrói vocabulário a partir de todas as notas existentes.
+        """
+        vocab = set()
+        for nota in self.notas.values():
+            for word in nota.conteudo.split():
+                vocab.add(word.lower())
+        return sorted(vocab)
+
+    def atualizar_links_em_lote(self, nota_ids: Optional[List[str]] = None) -> Dict[str, List[str]]:
+        """
+        Atualiza automaticamente links de similares em lote.
+
+        :param nota_ids: Lista de IDs de notas para processar. Se None, processa todas.
+        :return: Dicionário com mapeamento nota_id -> lista de IDs relacionados.
+        """
+        resultados = {}
+        alvo = nota_ids or list(self.notas.keys())
+        for nid in alvo:
+            resultados[nid] = [dest for dest, _ in self.link_automatico(nid)]
+        return resultados
+
+    def obter_grafo_semantico(self) -> Dict[str, Any]:
+        """
+        Retorna um grafo simples (dicionário) de relacionamentos entre notas.
+        """
+        grafo = {}
+        for nid, nota in self.notas.items():
+            grafo[nid] = nota.relacionamentos
+        return grafo
