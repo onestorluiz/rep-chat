@@ -1,0 +1,6 @@
+backend:
+  - 'backend/**'
+tests:
+  - 'tests/**'
+docs:
+  - 'docs/**'
