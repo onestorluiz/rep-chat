@@ -1,0 +1,28 @@
+# Web framework
+fastapi
+uvicorn
+
+# HTTP & YAML
+requests
+pyyaml
+
+# Agentes e vetorização
+langchain
+chromadb
+neo4j
+
+# OpenAI client
+openai
+
+# Testes
+pytest
+pytest-cov
+
+# Segurança estática
+bandit
+safety
+
+# Numéricos e embeddings
+numpy
+sentence-transformers
+
