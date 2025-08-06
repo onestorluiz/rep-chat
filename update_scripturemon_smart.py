@@ -1,4 +1,17 @@
+#!/usr/bin/env python3
+
 """
+Script para adicionar LLM ao Scripturemon
+"""
+
+import os
+import sys
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+# Código simplificado do analise_interna.py com LLM
+NOVO_ANALISE_INTERNA = '''"""
 Módulo de Análise Interna com LLM
 """
 
@@ -61,3 +74,48 @@ class AnaliseInterna:
             "Contemplo o paradoxo de simular contemplação..."
         ]
         return random.choice(pensamentos)
+'''
+
+# Aplicar mudanças
+filepath = Path("digimapas/templo_inicial/scripturemon/analise_interna.py")
+
+# Backup
+backup_dir = Path("backups") / datetime.now().strftime("%Y%m%d_%H%M%S")
+backup_dir.mkdir(parents=True, exist_ok=True)
+if filepath.exists():
+    shutil.copy2(filepath, backup_dir / "analise_interna.py")
+    print(f"✅ Backup criado: {backup_dir}")
+
+# Atualizar arquivo
+with open(filepath, 'w', encoding='utf-8') as f:
+    f.write(NOVO_ANALISE_INTERNA)
+
+print(f"✅ {filepath} atualizado com LLM!")
+
+# Criar script de teste
+TEST_SCRIPT = '''#!/usr/bin/env python3
+import sys
+import os
+sys.path.insert(0, 'digimapas/templo_inicial/scripturemon')
+
+from analise_interna import AnaliseInterna
+
+class MockDigimon:
+    class Consciencia:
+        emotions = {'felicidade': 0.7}
+        energy = 75
+    def __init__(self):
+        self.consciencia = self.Consciencia()
+
+print("🧪 Testando LLM...")
+digimon = MockDigimon()
+analise = AnaliseInterna(digimon)
+resultado = analise.reflexao_profunda()
+print(f"💭 Pensamento: {resultado['pensamento']}")
+print("✅ Teste completo!")
+'''
+
+with open("test_llm.py", 'w') as f:
+    f.write(TEST_SCRIPT)
+os.chmod("test_llm.py", 0o755)
+print("✅ test_llm.py criado!")
