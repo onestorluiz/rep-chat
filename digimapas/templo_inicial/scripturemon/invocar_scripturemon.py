@@ -1,7 +1,6 @@
 import time
 import os
 
-from modules.core import ConsciousnessCore
 from modules.amigdala import Amigdala
 from modules.hipocampo import Hipocampo
 from modules.cortex import Cortex

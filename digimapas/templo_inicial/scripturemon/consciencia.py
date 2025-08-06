@@ -1,14 +1,14 @@
-from modules.core import ConsciousnessCore
-from modules.amigdala import Amigdala
-from modules.hipocampo import Hipocampo
-from modules.cortex import Cortex
-from modules.memoria_vetorial import MemoriaVetorial
-from modules.reflexor import Reflexor
-from modules.ritual_engine import RitualEngine
-from modules.bt_generator import BehaviorTreeGenerator
-from modules.expressor_emocional import ExpressorEmocional
-from modules.sistema_simulacao_humana import simular_clicks
-from modules.espelho_cognitivo import analisar as espelho_analisar
+from core import ConsciousnessCore
+from amigdala import Amigdala
+from hipocampo import Hipocampo
+from cortex import Cortex
+from memoria_vetorial import MemoriaVetorial
+from reflexor import Reflexor
+from ritual_engine import RitualEngine
+from bt_generator import BehaviorTreeGenerator
+from expressor_emocional import ExpressorEmocional
+from sistema_simulacao_humana import simular_clicks
+from espelho_cognitivo import analisar as espelho_analisar
 
 from metacognicao import MetacognicaoExecutavel
 from viralidade import ViralidadeDigital

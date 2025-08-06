@@ -19,7 +19,15 @@ class AnaliseInterna:
         
         if OLLAMA_DISPONIVEL:
             try:
-                self.llm = Ollama(model="llama2", temperature=0.7)
+                # Tentar modelos disponíveis em ordem de preferência
+                for modelo in ['tinyllama', 'llama3.2', 'codellama']:
+                    try:
+                        self.llm = Ollama(model=modelo, temperature=0.7)
+                        self.llm.invoke("teste")  # Testar
+                        print(f"✅ LLM Ollama conectado: {modelo}")
+                        break
+                    except:
+                        continue
                 print("✅ LLM Ollama conectado")
             except:
                 print("⚠️ LLM não disponível")
