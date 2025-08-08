@@ -1,4 +1,3 @@
-https://github.com/onestorluiz/rep-chat/new/main/digimapas/templo_inicial/scripturemon
 """
 Memória Universal (Mem0) para Scripturemon.
 
@@ -13,13 +12,43 @@ poderá usar modelos de linguagem para extrair fatos mais complexos e resumos.
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
-# Importa dependências de memória vetorial e semântica se disponíveis
-from .memoria_vetorial import MemoriaVetorial  # type: ignore
+# Importa dependências de memória vetorial e semântica se disponíveis.
+# Caso a implementação completa de ``MemoriaVetorial`` não possa ser
+# importada (por ausência de dependências como o ``chromadb``), um stub
+# simples é definido para permitir a execução dos testes sem efeitos
+# colaterais externos.
+try:  # pragma: no cover - caminho utilizado apenas quando as deps estão instaladas
+    from .memoria_vetorial import MemoriaVetorial  # type: ignore
+except Exception:  # pragma: no cover - fallback para ambientes de teste
+    class MemoriaVetorial:  # type: ignore
+        """Implementação mínima usada quando ``chromadb`` não está disponível.
+
+        Este stub registra eventos em memória e fornece os métodos
+        utilizados por :class:`MemoriaUniversal`. Ele não realiza busca
+        vetorial real, mas mantém a interface compatível.
+        """
+
+        def __init__(self, digimon_id: str) -> None:
+            self.digimon_id = digimon_id
+            self._dados: List[str] = []
+
+        def registrar_evento(self, conteudo: str, metadados: Dict[str, object]) -> None:
+            self._dados.append(conteudo)
+
+        def buscar_contexto(self, consulta: str, k: int = 5) -> List[Dict[str, object]]:
+            return []
+
+        def apagar_memoria_antiga(self, limite: int = 1000) -> None:  # pragma: no cover - sem efeito
+            pass
+
+        def status(self) -> Dict[str, object]:  # pragma: no cover - sem efeito
+            return {"total_fragmentos": len(self._dados)}
+
 try:
     from .memoria_semantica import MemoriaSemantica  # type: ignore
-except Exception:
+except Exception:  # pragma: no cover - ausência opcional
     MemoriaSemantica = None  # type: ignore
 
 
@@ -56,15 +85,25 @@ class MemoriaUniversal:
         evento: str,
         pensamento: str,
         tags: Optional[List[str]] = None,
-    ) -> None:
-        """
-        Realiza a extração simples de fatos a partir de um evento e um pensamento,
-        e atualiza a memória vetorial e semântica conforme necessário.
+    ) -> List[str]:
+        """Extrai fatos da interação e atualiza as memórias.
+
+        A extração atual é trivial: tanto ``evento`` quanto ``pensamento`` são
+        tratados como candidatos e adicionados à memória vetorial caso não
+        exista algo similar. O método retorna a lista de textos considerados,
+        permitindo que chamadas externas verifiquem quais fatos foram
+        processados.
 
         Args:
             evento: Texto do evento/pergunta/mensagem recebida.
             pensamento: Texto do pensamento ou resposta gerada pelo agente.
-            tags: Lista de rótulos ou categorias associadas à interação (ex.: emoção, prioridade).
+            tags: Lista de rótulos ou categorias associadas à interação
+                (ex.: emoção, prioridade).
+
+        Returns:
+            List[str]: Lista de candidatos que foram avaliados.
+
+        TODO: utilizar modelo de linguagem para sumarização e extração mais rica.
         """
         tags = tags or []
         candidatos: List[str] = []
@@ -112,7 +151,7 @@ class MemoriaUniversal:
                 except Exception:
                     # Falha silenciosa para não interromper
                     pass
-
+        return candidatos
     def status(self) -> Dict[str, object]:
         """
         Retorna um resumo simples da memória universal.
@@ -122,3 +161,4 @@ class MemoriaUniversal:
             "threshold": self.similarity_threshold,
             "total_memorias": self.vetorial.status().get("total_fragmentos", 0),
         }
+

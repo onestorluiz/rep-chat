@@ -96,3 +96,23 @@ class MemoriaSemantica:
         origem.relacionamentos.setdefault(tipo, []).append(destino_id)
         # Atualiza persistencia
         self._salvar_nota(origem_id, origem)
+    def link_automatico(self, nova_nota: NotaSemantica, threshold: float = 0.85) -> None:
+        """Cria links automáticos entre notas com base em similaridade de embeddings.
+
+        Args:
+            nova_nota: Nota recém-criada que será comparada com as demais.
+            threshold: Valor mínimo de similaridade para criação do relacionamento.
+                Padrão de ``0.85``.
+
+        Example:
+            >>> ms = MemoriaSemantica(persist_dir="/tmp/mem")
+            >>> nid = ms.registrar_nota("Texto", tags=["exemplo"])
+            >>> ms.link_automatico(ms.notas[nid])  # doctest: +SKIP
+
+        TODO: integrar com modelo real de embeddings e grafo persistente.
+        """
+        for outra in self.notas.values():
+            sim = self.embeddings.similarity(nova_nota.vector, outra.vector)
+            if sim >= threshold:
+                self.grafo.create_edge(nova_nota.id, outra.id, weight=sim)
+

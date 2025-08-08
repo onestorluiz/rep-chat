@@ -1,97 +1,94 @@
-"""
-orquestrador.py
+"""Orquestrador geral do ambiente Scripturemon.
 
-Modulo que coordena a execucao de multiplos agentes no Digimundo.
-"""
-from __future__ import annotations
-from typing import List, Dict, Any, Optional
-import logging
-try:
-    from fastapi import FastAPI
-except ImportError:
-    # fallback stub if fastapi is not installed
-    class FastAPI:
-        def __init__(self):
-            pass
-        def get(self, path: str):
-            def decorator(func):
-                return func
-            return decorator
+Este módulo fornece a classe :class:`OrquestradorGeral` responsável por
+sincronizar agentes e o grafo de mundo a cada ciclo de simulação. Uma API
+``FastAPI`` expõe um endpoint simples de status para inspeção externa.
 
-class FisicaDigital:
-    """Stub de fisica digital para ser substituido pela implementacao real."""
+Todo o código aqui é ilustrativo e mantém implementações mínimas para que
+os testes possam importar o módulo sem dependências complexas.
+
+TODO: integrar com motor de física real e agentes completos.
+"""
+
+from typing import Any, List
+from fastapi import FastAPI
+
+
+class MundoStub:
+    """Grafo de mundo simplificado usado apenas para testes.
+
+    Este stub fornece as três operações básicas esperadas pelo
+    :class:`OrquestradorGeral`. Em um sistema real, ele seria substituído
+    por uma estrutura que atualiza a física, calcula percepções e aplica
+    ações dos agentes.
+    """
+
+    def update_physics(self) -> None:  # pragma: no cover - comportamento trivial
+        """Atualiza o estado físico do mundo.
+
+        TODO: substituir por integração com simulador real.
+        """
+
+    def get_percepts(self, agent: Any) -> List[Any]:  # pragma: no cover - stub
+        """Retorna percepções disponíveis para ``agent``.
+
+        Args:
+            agent: Agente que receberá percepções.
+
+        Returns:
+            list: Lista de percepções, vazia neste stub.
+        """
+        return []
+
+    def apply_actions(self, actions: Any) -> None:  # pragma: no cover - stub
+        """Aplica ações geradas pelos agentes.
+
+        Args:
+            actions: Ações retornadas por ``ag.viver``.
+        """
+
+
+class OrquestradorGeral:
+    """Coordena agentes e o grafo de mundo.
+
+    Args:
+        agents: Lista de agentes com método ``viver``.
+        world_graph: Objeto responsável pela física e percepções.
+
+    Example:
+        >>> orq = OrquestradorGeral([], MundoStub())
+        >>> orq.tick()  # executa um ciclo
+    """
+
+    def __init__(self, agents: List[Any], world_graph: MundoStub) -> None:
+        self.agents = agents
+        self.world = world_graph
+
     def tick(self) -> None:
-        """Atualiza o estado do mundo digital."""
-        pass
+        """Executa um ciclo de simulação.
 
-class Reflexor:
-    """Stub para registro de eventos no Neo4j. Substitua pela implementacao real."""
-    @staticmethod
-    def registrar_evento(evento: Dict[str, Any]) -> None:
-        """Registra um evento no grafo da memoria."""
-        pass
-
-class Supervisor:
-    """
-    Classe responsavel por supervisionar todos os agentes e o mundo virtual.
-    """
-    def __init__(self, agentes: List[Any], fisica: Optional[FisicaDigital] = None, reflexor: Optional[Reflexor] = None):
-        self.agentes = agentes
-        self.fisica = fisica or FisicaDigital()
-        self.reflexor = reflexor or Reflexor()
-        self.logger = logging.getLogger("orquestrador")
-        if not self.logger.handlers:
-            handler = logging.FileHandler("logs/orquestrador.log")
-            handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
-
-    def tick(self) -> List[Dict[str, Any]]:
+        TODO: lidar com exceções de agentes e registrar métricas.
         """
-        Executa um ciclo de simulacao:
-        - Atualiza fisica digital
-        - Passa percepcoes para cada agente
-        - Recolhe acoes dos agentes e registra no grafo
-        """
-        try:
-            self.fisica.tick()
-            self.logger.debug("FisicaDigital atualizada.")
-        except Exception as exc:
-            self.logger.exception("Erro ao atualizar FisicaDigital: %s", exc)
-        resultados: List[Dict[str, Any]] = []
-        percepcoes: Dict[str, Any] = {}
-        for agente in self.agentes:
-            try:
-                # cada agente deve implementar .viver(percepcoes) e .acao()
-                if hasattr(agente, "viver"):
-                    agente.viver(percepcoes.get(getattr(agente, "nome", ""), {}))
-                acao = getattr(agente, "acao", lambda: None)()
-                if acao:
-                    resultado = {"agente": getattr(agente, "nome", "desconhecido"), "acao": acao}
-                    resultados.append(resultado)
-            except Exception as exc:
-                self.logger.exception("Erro ao processar agente %s: %s", getattr(agente, "nome", "sem nome"), exc)
-        # registra eventos
-        for resultado in resultados:
-            try:
-                self.reflexor.registrar_evento(resultado)
-            except Exception as exc:
-                self.logger.warning("Falha ao registrar evento %s: %s", resultado, exc)
-        return resultados
+        # Atualiza física do mundo
+        self.world.update_physics()
+        # Cada agente recebe percepções e gera ações
+        for ag in self.agents:
+            percepts = self.world.get_percepts(ag)
+            actions = ag.viver(percepts)
+            self.world.apply_actions(actions)
 
-# Instancia global opcional para uso em API de monitoramento
-supervisor_global: Optional[Supervisor] = None
 
-# API HTTP simples para monitoramento de estado
+# Instâncias globais utilizadas pela API FastAPI
+world_graph_instance = MundoStub()
+orq = OrquestradorGeral([], world_graph_instance)
 app = FastAPI()
 
+
 @app.get("/status")
-def status() -> Dict[str, Any]:
+def status() -> dict:
+    """Retorna nomes dos agentes supervisionados.
+
+    Returns:
+        dict: Dicionário com a chave ``agents`` e os nomes dos agentes.
     """
-    Retorna o status atual dos agentes supervisionados.
-    """
-    agentes_info = []
-    if supervisor_global:
-        for a in supervisor_global.agentes:
-            agentes_info.append({"nome": getattr(a, "nome", "desconhecido"), "estado": getattr(a, "estado", {})})
-    return {"agentes": agentes_info}
+    return {"agents": [getattr(ag, "name", "anon") for ag in orq.agents]}

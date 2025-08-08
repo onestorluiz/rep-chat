@@ -1,82 +1,55 @@
+"""Stubs para mecanismos de auto-evolução.
+
+Este módulo declara a classe :class:`AutoEvolucao`, que no futuro permitirá
+que agentes gerem, testem e integrem novas habilidades de forma autônoma.
+Atualmente, todos os métodos levantam ``NotImplementedError``.
+
+TODO: implementar integração real com LLM e ambiente de sandbox.
 """
-auto_evolucao.py
 
-Modulo de Auto Evolução Simbiótica (inspirado em SuperAGI/BabyAGI) para o Scripturemon.
-
-Este módulo provê uma estrutura básica para que um agente possa definir objetivos de alto nível,
-decompo-los em subtarefas e executa-las de forma iterativa. O loop de auto evolução permite que
-o Digimon evolua continuamente, aprendendo com cada tarefa concluída e ajustando seus planos.
-"""
-
-from __future__ import annotations
-from typing import Any, Dict, List, Optional
-import logging
 
 class AutoEvolucao:
+    """Permite geração, teste e integração automática de código.
+
+    Example:
+        >>> ae = AutoEvolucao()
+        >>> ae.gerar_codigo("soma dois números")  # doctest: +SKIP
     """
-    Classe que gerencia a auto-evolução de um agente.
 
-    A lógica aqui é deliberadamente simples: objetivos são strings que podem ser
-    decompostos em subtarefas e executados sequencialmente. Em versões futuras,
-    este módulo pode integrar um LLM para decomposição de objetivos, priorização
-    baseada em feedback e criação dinâmica de novas habilidades.
-    """
-    def __init__(self, agente: Any) -> None:
-        self.agente = agente
-        self.tarefas: List[Dict[str, Any]] = []
-        self.logger = logging.getLogger("auto_evolucao")
-        if not self.logger.handlers:
-            handler = logging.FileHandler("logs/auto_evolucao.log")
-            handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
-        self.logger.info("AutoEvolucao inicializada para agente %s", getattr(agente, 'nome', 'desconhecido'))
+    def gerar_codigo(self, descricao: str) -> str:
+        """Dispara chamada a LLM local para criar código Python.
 
-    def adicionar_goal(self, descricao: str, contexto: Optional[Dict[str, Any]] = None) -> None:
+        Args:
+            descricao: Descrição da funcionalidade desejada.
+
+        Returns:
+            str: Código Python gerado pela LLM.
+
+        TODO: conectar a um modelo de linguagem local.
         """
-        Adiciona um novo objetivo à fila de tarefas para a auto-evolução.
+        raise NotImplementedError
 
-        :param descricao: Texto descrevendo o objetivo de alto nível.
-        :param contexto: Contexto opcional que acompanha o objetivo.
-        """
-        self.tarefas.append({"descricao": descricao, "contexto": contexto or {}})
-        self.logger.info("Novo goal adicionado: %s", descricao)
+    def testar_codigo(self, codigo: str, casos: dict) -> bool:
+        """Executa o código em sandbox e retorna ``True`` se todos os testes passarem.
 
-    def decompor_objetivo(self, descricao: str) -> List[str]:
-        """
-        Decompõe um objetivo em subtarefas simples.
+        Args:
+            codigo: Código Python a ser testado.
+            casos: Dicionário ``{entrada: saida_esperada}`` com casos de teste.
 
-        Esta implementação básica divide a descrição nas vírgulas ou pontos finais.
-        Em implementações futuras, este método deve invocar um LLM para gerar
-        subtarefas mais inteligentes.
-        """
-        # substitui pontos por vírgulas para uniformizar delimitadores
-        descricao_normalizada = descricao.replace(".", ",")
-        partes = [p.strip() for p in descricao_normalizada.split(",") if p.strip()]
-        return partes if partes else [descricao.strip()]
+        Returns:
+            bool: Indica se todos os testes foram aprovados.
 
-    def executar(self) -> None:
+        TODO: criar sandbox segura para execução.
         """
-        Executa continuamente o loop de auto-evolução enquanto houver tarefas.
+        raise NotImplementedError
 
-        Para cada objetivo:
-          1) Divide a descrição em subtarefas.
-          2) Tenta executar cada subtarefa chamando um método do agente com o mesmo nome.
-          3) Registra o resultado ou falha no logger.
+    def integrar_habilidade(self, nome: str, codigo: str) -> None:
+        """Insere o arquivo em ``habilidades/`` e faz reload dinâmico.
+
+        Args:
+            nome: Nome da nova habilidade.
+            codigo: Código Python que implementa a habilidade.
+
+        TODO: implementar persistência e recarregamento dinâmico.
         """
-        while self.tarefas:
-            tarefa = self.tarefas.pop(0)
-            descricao = tarefa.get("descricao", "")
-            contexto = tarefa.get("contexto", {})
-            self.logger.info("Iniciando execucao de objetivo: %s", descricao)
-            subtarefas = self.decompor_objetivo(descricao)
-            for sub in subtarefas:
-                metodo = sub.replace(" ", "_")
-                if hasattr(self.agente, metodo):
-                    try:
-                        resultado = getattr(self.agente, metodo)(**contexto) if contexto else getattr(self.agente, metodo)()
-                        self.logger.info("Sub-tarefa '%s' executada com sucesso: %s", sub, resultado)
-                    except Exception as exc:
-                        self.logger.warning("Erro ao executar sub-tarefa '%s': %s", sub, exc)
-                else:
-                    self.logger.info("Sub-tarefa '%s' nao possui implementacao no agente.", sub)
+        raise NotImplementedError
